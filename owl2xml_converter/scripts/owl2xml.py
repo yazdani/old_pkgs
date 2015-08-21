@@ -1,7 +1,8 @@
 #!/usr/bin/python
 " author: Fereshta Yazdani"
 
-import sys
+import os, sys
+import os.path
 
 inFile = sys.argv[1]
 outFile = sys.argv[2]
@@ -9,10 +10,78 @@ array = []
 map_name = []
 position = []
 orientation = []
+temp_array = []
+temp_array2 = []
+temp_array3 = []
+count = 0
+iss = 1
+j = 0
+iterator3 = -4
+iterator2 = -1
+iterator1 = -2
+    
+# Path to be created
+path = "./defs"
+
+if os.path.exists(path):
+    print "directory already exist"
+else:
+    os.mkdir( path, 0755 );
+
 with open(inFile,'r') as i:
     lines = i.readlines()
-    
-with open(outFile,'w') as o:
+
+###FOR THE PATHS
+for line in lines:
+    if iterator2 == -1 or iterator1 == -2 or iterator1 == -1:
+        iterator2 = iterator2+1
+        iterator1= iterator1+1
+    else:
+        temp2= lines[iterator2]
+        temp3= lines[iterator1]
+        if "owl:NamedIndividual rdf:about=\"&knowrob;" in temp3 and "rdf:type rdf:resource=\"&knowrob;" in temp2 and "knowrob:heightOfObject rdf:datatype=" in line:
+            so = temp3.split(";")
+            so1 = so[1].split("\"")
+            to = temp2.split(";")
+            to1 = to[1].split("\"")
+            temp_array.append(so1[0])
+            temp_array.append(to1[0])
+        iterator2 = iterator2+1
+        iterator1 = iterator1+1
+
+for line in lines:
+    if iterator3 == -4 or iterator3 == -3 or iterator3 == -2 or iterator3 == -1:
+        iterator3 = iterator3+1
+    else:
+        tempo= lines[iterator3]
+        if "rdf:Description rdf:about=" in tempo and "owl:hasValue rdf:datatype" in line:
+            ao = tempo.split(";")
+            ao1 = ao[1].split("\"")
+            bo = line.split(">")
+           # print bo
+            bo1 = bo[1].split("</")
+           # print bo1
+            temp_array2.append(ao1[0])
+            temp_array2.append(bo1[0])
+        iterator3 = iterator3+1
+#print len(temp_array)
+#print iss
+while (iss < len(temp_array) ):
+    j = 0
+    z = 0
+    y = iss -1
+    while (j < len(temp_array2)):
+        if temp_array[iss] == temp_array2[j]:
+            temp_array3.append(temp_array[y])
+            z=j+1
+            temp_array3.append(temp_array2[z])
+        j = j + 2
+    iss = iss +2
+#print temp_array
+#print temp_array2
+#print temp_array3
+
+with open(path+"/"+outFile,'w') as o:
     for line in lines:
         if line == "<?xml version=\"1.0\"?>\n":
             o.write(line+"\n")
@@ -34,11 +103,13 @@ with open(outFile,'w') as o:
             tester1 = line.split(">")
             tester2 = tester1[1].split("<")
             position.append(tester2[0])
+            
+
     for pointer in array:
         if pointer == "VectorX" or pointer == "VectorXneg" or pointer == "VectorTable" or "SemanticMapPerception" in pointer or "RotationMatrix3D" in pointer:
             temp = "test"
         else:
-            o.write("<xacro:include filename=\"$(PATH_TO_THE_PACKAGE)/"+pointer+".xml\"/>\n")
+            o.write("<xacro:include filename=\"./defs/"+pointer+".xml\"/>\n")
     o.write("\n<link name=\"map_link\">\n")
     o.write("</link>\n\n")
     for pointer2 in array:
@@ -48,17 +119,32 @@ with open(outFile,'w') as o:
             o.write("<"+pointer2+"/>\n")
     o.write("\n</robot>\n")
 
-with open(outFile,'r') as os:
+with open(path+"/"+outFile,'r') as os:
     newlines = os.readlines()
 
+#print newlines
 for index in newlines:
-    if "PATH_TO_THE_PACKAGE" in index:
-        temp1 = index.split("/")
-        temp2 = temp1[1].split("\"")
-        map_name = temp2[0]
-        temp3 = map_name.split(".")
+    if "./defs" in index:
+        temp1 = index.split("defs/")
+      #  print "mama"
+       # temp2 = temp1[1].split("\"")
+     #   map_name = temp2[0]
+        temp3 = temp1[1].split(".")
         temp4 = temp3[0]
-        with open(map_name,'w') as o:
+        map_name = temp4
+        temp5 = ''
+        temp6 = 0
+        temp7 = 0
+        while (temp5 == ''):
+            #print temp4
+         #   print "verar"
+        #    print temp_array3[temp6]
+            if temp4 == temp_array3[temp6]:
+                temp7 = temp6 + 1
+                temp5 = temp_array3[temp7]
+            temp6 = temp6 + 2
+        #print temp5
+        with open(path+"/"+map_name+".xml",'w') as o:
             o.write("<?xml version=\"1.0\"?>\n")
             o.write("<robot xmlns:sensor=\"http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor\"\n")
             o.write("xmlns:controller=\"http://playerstage.sourceforge.net/gazebo/xmlschema/#controller\"\n")
@@ -105,16 +191,17 @@ for index in newlines:
             testera = position.pop(0)
             testerb = position.pop(0)
             testerc = position.pop(0)
+            
             o.write("<origin xyz=\""+testera+" "+testerb+" "+testerc+" "+"\" rpy=\"0 0 0\"/>\n")
             o.write("<geometry>\n")
-            o.write("<mesh filename=\"package://PATH_TO_MESH/tanne1.dae+\"/>\n")
+            o.write("<mesh filename=\""+temp5+"\"/>\n")
             o.write("</geometry>\n")
-            o.write("<material name=\"TODOCOLOR\"/>\n")
+            o.write("<material name=\"Green\"/>\n")
             o.write("</visual>\n")
             o.write("<collision>\n")
             o.write("<origin xyz=\""+testera+" "+testerb+" "+testerc+" "+"\" rpy=\"0 0 0\"/>\n")
             o.write("<geometry>\n")
-            o.write("<mesh filename=\"package://PATH_TO_MESH/tanne1.dae+\"/>\n")
+            o.write("<mesh filename=\""+temp5+"\"/>\n")
             o.write("</geometry>\n")
             o.write("</collision>\n")    
             o.write("</link>\n\n")
