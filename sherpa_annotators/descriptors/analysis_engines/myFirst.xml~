@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<taeDescription xmlns="http://uima.apache.org/resourceSpecifier">
+  <frameworkImplementation>org.apache.uima.cpp</frameworkImplementation>
+  <primitive>false</primitive>
+  <delegateAnalysisEngineSpecifiers>
+    <delegateAnalysisEngine key="MyFirstAnnotator">
+      <import location="../annotators/MyFirstAnnotator.xml"/>
+    </delegateAnalysisEngine>
+  </delegateAnalysisEngineSpecifiers>
+  <analysisEngineMetaData>
+    <name>myFirst</name>
+    <description>Simple pipeline for demo</description>
+    <version>1.0</version>
+    <vendor/>
+ <!--<configurationParameters searchStrategy="none">
+      <configurationParameter>
+        <name>camera_config_files</name>
+        <description>path to config file that holds info about camera topics and tf frame names</description>
+        <type>String</type>
+        <multiValued>true</multiValued>
+        <mandatory>true</mandatory>
+        <overrides>
+          <parameter>MyFirstAnnotator/camera_config_files</parameter>
+        </overrides>
+      </configurationParameter>
+    </configurationParameters> 
+   <configurationParameterSettings>
+      <nameValuePair>
+        <name>camera_config_files</name>
+        <value>
+          <array>
+<string>config_mongodb_playback.ini</string> 
+          </array>
+        </value>
+      </nameValuePair>
+    </configurationParameterSettings>-->
+    <flowConstraints>
+      <fixedFlow>
+     <node>MyFirstAnnotator</node>
+<!--      <node>ImagePreprocessor</node>-->
+<!--      <node>RegionFilter</node>-->
+<!--      <node>NormalEstimator</node>-->
+<!--      <node>PlaneAnnotator</node>-->
+<!--      <node>ImageSegmentationAnnotator</node>-->
+<!--      <node>PointCloudClusterExtractor</node>-->
+<!--      <node>ClusterMerger</node>-->
+<!--      <node>Cluster3DGeometryAnnotator</node>-->
+<!--      <node>PrimitiveShapeAnnotator</node>-->
+<!--      <node>FeatureAnnotator</node>-->
+<!--      <node>ClusterTracker</node>-->
+<!--      <node>SacModelAnnotator</node>-->
+<!--      <node>GenericFeatureFromNormalsEstimator</node>-->
+<!--      <node>LinemodAnnotator</node>-->
+<!--      <node>ClusterColorHistogramCalculator</node>-->
+<!--      <node>ResultAdvertiser</node>-->
+      </fixedFlow>
+    </flowConstraints>
+    <typePriorities/>
+    <fsIndexCollection>
+      <fsIndexes>
+        <fsIndexDescription>
+          <label>general</label>
+          <typeName>uima.cas.TOP</typeName>
+          <kind>bag</kind>
+        </fsIndexDescription>
+      </fsIndexes>
+    </fsIndexCollection>
+    <capabilities>
+      <capability>
+        <inputs/>
+        <outputs/>
+        <languagesSupported>
+          <language>x-unspecified</language>
+        </languagesSupported>
+      </capability>
+    </capabilities>
+    <operationalProperties>
+      <modifiesCas>true</modifiesCas>
+      <multipleDeploymentAllowed>true</multipleDeploymentAllowed>
+      <outputsNewCASes>false</outputsNewCASes>
+    </operationalProperties>
+  </analysisEngineMetaData>
+</taeDescription>

@@ -1,0 +1,214 @@
+#include <uima/api.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <cmath>
+#include <iostream>
+#include <pcl/point_types.h>
+#include <rs/types/all_types.h>
+//RS
+#include <rs/scene_cas.h>
+#include <rs/utils/time.h>
+#include <rs/DrawingAnnotator.h>
+
+// OpenCV
+#include <opencv2/opencv.hpp>
+
+using namespace uima;
+
+
+class DetectPolygons : public DrawingAnnotator
+{
+private:
+  float test_param;
+  cv::Mat images;
+ 
+public:
+
+
+  DetectPolygons(): DrawingAnnotator(__func__)
+  {
+  }
+
+  TyErrorId initialize(AnnotatorContext &ctx)
+  {
+    outInfo("initialize");
+    ctx.extractValue("test_param", test_param);
+    return UIMA_ERR_NONE;
+  }
+
+  TyErrorId typeSystemInit(TypeSystem const &type_system)
+  {
+    outInfo("typeSystemInit");
+    return UIMA_ERR_NONE;
+  }
+
+  TyErrorId destroy()
+  {
+    outInfo("destroy");
+    return UIMA_ERR_NONE;
+  }
+
+  TyErrorId processWithLock(CAS &tcas, ResultSpecification const &res_spec)
+  {
+
+    outInfo("process start");
+    rs::StopWatch clock;
+    rs::SceneCas cas(tcas);
+    pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud_ptr(new pcl::PointCloud<pcl::PointXYZRGBA>);
+    //cv::Mat image;
+    cv::VideoCapture cap;
+    //cap.set(CV_CAP_PROP_FRAME_WIDTH, 640);
+    //cap.set(CV_CAP_PROP_FRAME_HEIGHT, 480); 
+
+    //cap.read(images);
+    images = cv::imread("_happy_fish.png",1);
+    //images = cv::Mat(300, 500, CV_8UC3);
+    outInfo("Test param =  " << test_param);
+    //  cv::imshow("ja", image);
+    cas.get(VIEW_COLOR_IMAGE_HD, images);
+    cas.get(VIEW_CLOUD, *cloud_ptr);
+    // drawImageWithLock(image);
+    outInfo("Cloud size: " << cloud_ptr->points.size());
+    outInfo("took: " << clock.getTime() << " ms.");
+    
+    return UIMA_ERR_NONE;
+   
+  }
+
+  void drawImageWithLock(cv::Mat &disp)
+  {
+    cv::Mat ima;
+    cv::cvtColor( images, ima, CV_BGR2GRAY );
+
+    if (!ima.empty()) {
+      disp = ima.clone();
+    }
+    cv::waitKey(33);
+
+	// Use Canny instead of threshold to catch squares with gradient shading
+	cv::Mat bw;
+	cv::Canny(gray, bw, 0, 50, 5);
+
+	// Find contours
+	std::vector<std::vector<cv::Point> > contours;
+	cv::findContours(bw.clone(), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+	imshow("hetst", bw);
+	std::vector<cv::Point> approx;
+	cv::Mat dst = src.clone();
+
+	for (int i = 0; i < contours.size(); i++)
+	{
+
+	 
+		// Approximate contour with accuracy proportional
+		// to the contour perimeter
+		cv::approxPolyDP(cv::Mat(contours[i]), approx, cv::arcLength(cv::Mat(contours[i]), true)*0.02, true);
+
+		// Skip small or non-convex objects 
+		if (std::fabs(cv::contourArea(contours[i])) < 100 || !cv::isContourConvex(approx))
+			continue;
+		std::cout << approx.size() << std::endl;
+		if (approx.size() == 3)
+		{
+			setLabel(dst, "TRI", contours[i]);    // Triangles
+			//	cv::Scalar color = cv::Scalar(  0, 255, 0 );
+			//	drawContours( src, contours, i, color, 2, 8, CV_RETR_EXTERNAL, 0, cv::Point() );
+		}
+		else if (approx.size() >= 4 && approx.size() <= 6)
+		{
+			// Number of vertices of polygonal curve
+			int vtc = approx.size();
+
+			// Get the cosines of all corners
+			std::vector<double> cos;
+			for (int j = 2; j < vtc+1; j++)
+				cos.push_back(angle(approx[j%vtc], approx[j-2], approx[j-1]));
+
+			// Sort ascending the cosine values
+			std::sort(cos.begin(), cos.end());
+
+			// Get the lowest and the highest cosine
+			double mincos = cos.front();
+			double maxcos = cos.back();
+
+			// Use the degrees obtained above and the number of vertices
+			// to determine the shape of the contour
+			std::cout << mincos << std::endl;
+			if (vtc == 4 && mincos >= -0.1 && maxcos <= 0.3){
+				setLabel(dst, "RECT", contours[i]);
+				 cv::Scalar color = cv::Scalar(  255, 255, 0 );
+				 drawContours( src, contours, i, color, 2, 8, CV_RETR_EXTERNAL, 0, cv::Point() );}
+			else if (vtc == 5 && mincos >= -0.34 && maxcos <= -0.27){
+				setLabel(dst, "PENTA", contours[i]);
+				 cv::Scalar color = cv::Scalar(  255, 255, 0 );
+				 drawContours( src, contours, i, color, 2, 8, CV_RETR_EXTERNAL, 0, cv::Point() );}
+			else if (vtc == 8 && mincos >= -0.55 && maxcos <= -0.45){
+				setLabel(dst, "Poly", contours[i]);
+			 cv::Scalar color = cv::Scalar(  255, 255, 0 );
+			 drawContours( src, contours, i, color, 2, 8, CV_RETR_EXTERNAL, 0, cv::Point() );}
+		
+		}
+		else
+		{
+			// Detect and label circles
+			double area = cv::contourArea(contours[i]);
+			cv::Rect r = cv::boundingRect(contours[i]);
+			int radius = r.width / 2;
+
+			if (std::abs(1 - ((double)r.width / r.height)) <= 0.2 &&
+			    std::abs(1 - (area / (CV_PI * std::pow(radius, 2)))) <= 0.2){
+
+				setLabel(dst, "CIR", contours[i]);
+				 cv::Scalar color = cv::Scalar(  255, 255, 0 );
+				 drawContours( src, contours, i, color, 2, 8, CV_RETR_EXTERNAL, 0, cv::Point() );}
+		}
+	}
+	cv::namedWindow( "ja", 0 );
+	//cv::namedWindow( "hm", 0 );
+	
+	cv::resizeWindow("ja", 500,500);
+        cv::imshow("ja", src);
+	//cv::resizeWindow("hm", 500,500);
+	//cv::imshow("hm", dst);
+	cv::waitKey(0);
+  }
+
+
+static double angle(cv::Point pt1, cv::Point pt2, cv::Point pt0)
+{
+	double dx1 = pt1.x - pt0.x;
+	double dy1 = pt1.y - pt0.y;
+	double dx2 = pt2.x - pt0.x;
+	double dy2 = pt2.y - pt0.y;
+	return (dx1*dx2 + dy1*dy2)/sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2) + 1e-10);
+}
+
+/**
+ * Helper function to display text in the center of a contour
+ */
+void setLabel(cv::Mat& im, const std::string label, std::vector<cv::Point>& contour)
+{
+	int fontface = cv::FONT_HERSHEY_SIMPLEX;
+	double scale = 1;
+	int thickness = 1;
+	int baseline = 0;
+
+	cv::Size text = cv::getTextSize(label, fontface, scale, thickness, &baseline);
+	cv::Rect r = cv::boundingRect(contour);
+
+	cv::Point pt(r.x + ((r.width - text.width) / 2), r.y + ((r.height + text.height) / 2));
+	cv::rectangle(im, pt + cv::Point(0, baseline), pt + cv::Point(text.width, -text.height), CV_RGB(255,255,255), CV_FILLED);
+	cv::putText(im, label, pt, fontface, scale, CV_RGB(0,0,0), thickness, 8);
+}
+
+
+
+
+
+
+
+
+};
+
+// This macro exports an entry point that is used to create the annotator.
+MAKE_AE(DetectPolygons)
